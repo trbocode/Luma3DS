@@ -11,7 +11,7 @@ endif
 include $(DEVKITARM)/base_tools
 
 name := Luma3DS
-revision := $(shell git describe --tags --match v[0-9]* --abbrev=8 | sed 's/-[0-9]*-g/-/i')
+revision := $(shell git describe --tags --match v[0-9]* --abbrev=8 | sed 's/-[0-9]*-g/-/')
 version_major := $(shell git describe --tags --match v[0-9]* | cut -c2- | cut -f1 -d- | cut -f1 -d.)
 version_minor := $(shell git describe --tags --match v[0-9]* | cut -c2- | cut -f1 -d- | cut -f2 -d.)
 version_build := $(shell git describe --tags --match v[0-9]* | cut -c2- | cut -f1 -d- | cut -f3 -d.)
@@ -119,7 +119,7 @@ $(dir_out)/$(name)$(revision).7z: all
 
 $(dir_out)/boot.firm: $(dir_build)/modules.bin $(dir_build)/arm11.elf $(dir_build)/main.elf $(dir_build)/k11_extension.bin
 	@mkdir -p "$(@D)"
-	@firmtool build $@ -D $^ -A 0x1FF60000 0x18000000 -C XDMA XDMA NDMA XDMA
+	@firmtool build $@ -D $^ -A 0x18180000 0x18000000 -C XDMA XDMA NDMA XDMA
 
 $(dir_build)/modules.bin: $(modules)
 	@mkdir -p "$(@D)"
@@ -164,7 +164,7 @@ $(dir_build)/config.o: CFLAGS += -DCONFIG_TITLE="\"$(name) $(revision) configura
 $(dir_build)/patches.o: CFLAGS += -DVERSION_MAJOR="$(version_major)" -DVERSION_MINOR="$(version_minor)"\
 						-DVERSION_BUILD="$(version_build)" -DISRELEASE="$(is_release)" -DCOMMIT_HASH="0x$(commit)"
 $(dir_build)/firm.o: $(dir_build)/modules.bin
-$(dir_build)/firm.o: CFLAGS += -DLUMA_SECTION0_SIZE="$(shell du -b $(dir_build)/modules.bin | cut -f1)"
+$(dir_build)/firm.o: CFLAGS += -DLUMA_SECTION0_SIZE="$(shell wc -c $(dir_build)/modules.bin | tr -d [:space:][:alpha:][:punct:])"
 
 $(dir_build)/bundled.h: $(bundled)
 	@$(foreach f, $(bundled),\
