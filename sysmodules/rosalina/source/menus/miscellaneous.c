@@ -27,6 +27,7 @@
 #include <3ds.h>
 #include "menus/miscellaneous.h"
 #include "input_redirection.h"
+#include "mcu.h"
 #include "memory.h"
 #include "draw.h"
 #include "hbloader.h"
@@ -37,14 +38,12 @@
 
 Menu miscellaneousMenu = {
     "Miscellaneous options menu",
-    .nbItems = 6,
+    .nbItems = 4,
     {
         { "Switch the hb. title to the current app.", METHOD, .method = &MiscellaneousMenu_SwitchBoot3dsxTargetTitle },
         { "Change the menu combo", METHOD, .method = MiscellaneousMenu_ChangeMenuCombo },
-        { "Save settings", METHOD, .method = &MiscellaneousMenu_SaveSettings },
         { "Start InputRedirection", METHOD, .method = &MiscellaneousMenu_InputRedirection },
-        { "Power off", METHOD, .method = &MiscellaneousMenu_PowerOff },
-        { "Reboot", METHOD, .method = &MiscellaneousMenu_Reboot },
+        { "Save settings", METHOD, .method = &MiscellaneousMenu_SaveSettings },
     }
 };
 
@@ -129,6 +128,7 @@ static void MiscellaneousMenu_ConvertComboToString(char *out, u32 combo)
 
     out[-1] = 0;
 }
+
 void MiscellaneousMenu_ChangeMenuCombo(void)
 {
     char comboStrOrig[64], comboStr[64];
@@ -224,7 +224,7 @@ void MiscellaneousMenu_SaveSettings(void)
     do
     {
         Draw_Lock();
-        Draw_DrawString(10, 10, COLOR_TITLE, "Process patches menu");
+        Draw_DrawString(10, 10, COLOR_TITLE, "Miscellaneous options menu");
         if(R_SUCCEEDED(res))
             Draw_DrawString(10, 30, COLOR_WHITE, "Operation succeeded.");
         else
@@ -255,7 +255,7 @@ void MiscellaneousMenu_InputRedirection(void)
         if(res != 0)
             sprintf(buf, "Failed to stop InputRedirection (0x%08x).", (u32)res);
         else
-            miscellaneousMenu.items[3].title = "Start InputRedirection";
+            miscellaneousMenu.items[2].title = "Start InputRedirection";
     }
     else
     {
@@ -311,7 +311,7 @@ void MiscellaneousMenu_InputRedirection(void)
                 if(res != 0)
                     sprintf(buf, "Starting InputRedirection... failed (0x%08x).", (u32)res);
                 else
-                    miscellaneousMenu.items[3].title = "Stop InputRedirection";
+                    miscellaneousMenu.items[2].title = "Stop InputRedirection";
 
                 done = true;
             }
@@ -333,57 +333,4 @@ void MiscellaneousMenu_InputRedirection(void)
         Draw_Unlock();
     }
     while(!(waitInput() & BUTTON_B) && !terminationRequest);
-}
-
-void MiscellaneousMenu_Reboot(void)
-{
-    Draw_Lock();
-    Draw_ClearFramebuffer();
-    Draw_FlushFramebuffer();
-    Draw_Unlock();
-
-    do
-    {
-        Draw_Lock();
-        Draw_DrawString(10, 10, COLOR_TITLE, "Miscellaneous options menu");
-        Draw_DrawString(10, 30, COLOR_WHITE, "Press A to reboot, press B to go back.");
-        Draw_FlushFramebuffer();
-        Draw_Unlock();
-
-        u32 pressed = waitInputWithTimeout(1000);
-
-        if(pressed & BUTTON_A)
-            svcKernelSetState(7);
-        else if(pressed & BUTTON_B)
-            return;
-    }
-    while(!terminationRequest);
-}
-
-void MiscellaneousMenu_PowerOff(void) // Soft shutdown.
-{
-    Draw_Lock();
-    Draw_ClearFramebuffer();
-    Draw_FlushFramebuffer();
-    Draw_Unlock();
-
-    do
-    {
-        Draw_Lock();
-        Draw_DrawString(10, 10, COLOR_TITLE, "Miscellaneous options menu");
-        Draw_DrawString(10, 30, COLOR_WHITE, "Press A to power off, press B to go back.");
-        Draw_FlushFramebuffer();
-        Draw_Unlock();
-
-        u32 pressed = waitInputWithTimeout(1000);
-
-        if(pressed & BUTTON_A)
-        {
-            menuLeave();
-            srvPublishToSubscriber(0x203, 0);
-        }
-        else if(pressed & BUTTON_B)
-            return;
-    }
-    while(!terminationRequest);
 }

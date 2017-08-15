@@ -120,6 +120,16 @@ static void initScreens(u32 brightnessLevel, struct fb *fbs)
         *(vu32 *)0x10400584 = 0x10101 * i;
 }
 
+static void setupFramebuffers(struct fb *fbs)
+{
+    *(vu32 *)0x10400468 = (u32)fbs[0].top_left;
+    *(vu32 *)0x1040046c = (u32)fbs[1].top_left;
+    *(vu32 *)0x10400494 = (u32)fbs[0].top_right;
+    *(vu32 *)0x10400498 = (u32)fbs[1].top_right;
+    *(vu32 *)0x10400568 = (u32)fbs[0].bottom;
+    *(vu32 *)0x1040056c = (u32)fbs[1].bottom;
+}
+
 static void clearScreens(struct fb *fb)
 {
     //Setting up two simultaneous memory fills using the GPU
@@ -174,6 +184,9 @@ void main(void)
                 continue;
             case INIT_SCREENS:
                 initScreens(*(vu32 *)ARM11_PARAMETERS_ADDRESS, (struct fb *)(ARM11_PARAMETERS_ADDRESS + 4));
+                break;
+            case SETUP_FRAMEBUFFERS:
+                setupFramebuffers((struct fb *)ARM11_PARAMETERS_ADDRESS);
                 break;
             case CLEAR_SCREENS:
                 clearScreens((struct fb *)ARM11_PARAMETERS_ADDRESS);

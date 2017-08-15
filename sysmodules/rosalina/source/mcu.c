@@ -24,50 +24,45 @@
 *         reasonable ways as different from the original version.
 */
 
-/*
-*   Screen init code by dark_samus, bil1s, Normmatt, delebile and others
-*   Screen deinit code by tiniVi
-*/
+#include "mcu.h"
 
-#pragma once
-
-#include "types.h"
-
-#define PDN_GPU_CNT (*(vu8  *)0x10141200)
-
-#define ARESCREENSINITIALIZED (PDN_GPU_CNT != 1)
-
-#define ARM11_PARAMETERS_ADDRESS 0x1FFFF000
-
-#define SCREEN_TOP_WIDTH     400
-#define SCREEN_BOTTOM_WIDTH  320
-#define SCREEN_HEIGHT        240
-#define SCREEN_TOP_FBSIZE    (3 * SCREEN_TOP_WIDTH * SCREEN_HEIGHT)
-#define SCREEN_BOTTOM_FBSIZE (3 * SCREEN_BOTTOM_WIDTH * SCREEN_HEIGHT)
-
-struct fb {
-     u8 *top_left;
-     u8 *top_right;
-     u8 *bottom;
-}  __attribute__((packed));
-
-typedef enum
+Result mcuInit(void)
 {
-    INIT_SCREENS = 0,
-    SETUP_FRAMEBUFFERS,
-    CLEAR_SCREENS,
-    SWAP_FRAMEBUFFERS,
-    UPDATE_BRIGHTNESS,
-    DEINIT_SCREENS,
-    PREPARE_ARM11_FOR_FIRMLAUNCH,
-    ARM11_READY,
-} Arm11Operation;
+    return srvGetServiceHandle(&mcuhwcHandle, "mcu::HWC");
+}
 
-extern struct fb fbs[2];
+Result mcuExit(void)
+{
+    return svcCloseHandle(mcuhwcHandle);
+}
 
-void prepareArm11ForFirmlaunch(void);
-void deinitScreens(void);
-void swapFramebuffers(bool isAlternate);
-void updateBrightness(u32 brightnessIndex);
-void clearScreens(bool isAlternate);
-void initScreens(void);
+Result mcuReadRegister(u8 reg, u8* data, u32 size)
+{
+    u32* ipc = getThreadCommandBuffer();
+    ipc[0] = 0x10082;
+    ipc[1] = reg;
+    ipc[2] = size;
+    ipc[3] = size << 4 | 0xC;
+    ipc[4] = (u32)data;
+    Result ret = svcSendSyncRequest(mcuhwcHandle);
+    if(ret < 0) return ret;
+    return ipc[1];
+}
+
+Result mcuWriteRegister(u8 reg, u8* data, u32 size)
+{
+    u32* ipc = getThreadCommandBuffer();
+    ipc[0] = 0x20082;
+    ipc[1] = reg;
+    ipc[2] = size;
+    ipc[3] = size << 4 | 0xA;
+    ipc[4] = (u32)data;
+    Result ret = svcSendSyncRequest(mcuhwcHandle);
+    if(ret < 0) return ret;
+    return ipc[1];
+}
+
+Result mcuGetLEDState(u8* out)
+{
+  return mcuReadRegister(0x28, out, 1);
+}

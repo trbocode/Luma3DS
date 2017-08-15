@@ -24,50 +24,12 @@
 *         reasonable ways as different from the original version.
 */
 
-/*
-*   Screen init code by dark_samus, bil1s, Normmatt, delebile and others
-*   Screen deinit code by tiniVi
-*/
-
 #pragma once
 
-#include "types.h"
+#include <3ds/types.h>
+#include "menu.h"
 
-#define PDN_GPU_CNT (*(vu8  *)0x10141200)
+extern Menu sysconfigMenu;
 
-#define ARESCREENSINITIALIZED (PDN_GPU_CNT != 1)
-
-#define ARM11_PARAMETERS_ADDRESS 0x1FFFF000
-
-#define SCREEN_TOP_WIDTH     400
-#define SCREEN_BOTTOM_WIDTH  320
-#define SCREEN_HEIGHT        240
-#define SCREEN_TOP_FBSIZE    (3 * SCREEN_TOP_WIDTH * SCREEN_HEIGHT)
-#define SCREEN_BOTTOM_FBSIZE (3 * SCREEN_BOTTOM_WIDTH * SCREEN_HEIGHT)
-
-struct fb {
-     u8 *top_left;
-     u8 *top_right;
-     u8 *bottom;
-}  __attribute__((packed));
-
-typedef enum
-{
-    INIT_SCREENS = 0,
-    SETUP_FRAMEBUFFERS,
-    CLEAR_SCREENS,
-    SWAP_FRAMEBUFFERS,
-    UPDATE_BRIGHTNESS,
-    DEINIT_SCREENS,
-    PREPARE_ARM11_FOR_FIRMLAUNCH,
-    ARM11_READY,
-} Arm11Operation;
-
-extern struct fb fbs[2];
-
-void prepareArm11ForFirmlaunch(void);
-void deinitScreens(void);
-void swapFramebuffers(bool isAlternate);
-void updateBrightness(u32 brightnessIndex);
-void clearScreens(bool isAlternate);
-void initScreens(void);
+void SysConfigMenu_ToggleLEDs(void);
+void SysConfigMenu_ToggleWireless(void);

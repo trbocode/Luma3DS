@@ -24,50 +24,39 @@
 *         reasonable ways as different from the original version.
 */
 
-/*
-*   Screen init code by dark_samus, bil1s, Normmatt, delebile and others
-*   Screen deinit code by tiniVi
-*/
+#include "svc/GetThreadInfo.h"
+#include "memory.h"
 
-#pragma once
-
-#include "types.h"
-
-#define PDN_GPU_CNT (*(vu8  *)0x10141200)
-
-#define ARESCREENSINITIALIZED (PDN_GPU_CNT != 1)
-
-#define ARM11_PARAMETERS_ADDRESS 0x1FFFF000
-
-#define SCREEN_TOP_WIDTH     400
-#define SCREEN_BOTTOM_WIDTH  320
-#define SCREEN_HEIGHT        240
-#define SCREEN_TOP_FBSIZE    (3 * SCREEN_TOP_WIDTH * SCREEN_HEIGHT)
-#define SCREEN_BOTTOM_FBSIZE (3 * SCREEN_BOTTOM_WIDTH * SCREEN_HEIGHT)
-
-struct fb {
-     u8 *top_left;
-     u8 *top_right;
-     u8 *bottom;
-}  __attribute__((packed));
-
-typedef enum
+Result GetHandleInfoHook(s64 *out, Handle handle, u32 type)
 {
-    INIT_SCREENS = 0,
-    SETUP_FRAMEBUFFERS,
-    CLEAR_SCREENS,
-    SWAP_FRAMEBUFFERS,
-    UPDATE_BRIGHTNESS,
-    DEINIT_SCREENS,
-    PREPARE_ARM11_FOR_FIRMLAUNCH,
-    ARM11_READY,
-} Arm11Operation;
+    if(type == 0x10000) // KDebug and KProcess: get context ID
+    {
+        KProcessHwInfo *hwInfo;
+        KProcessHandleTable *handleTable = handleTableOfProcess(currentCoreContext->objectContext.currentProcess);
+        KAutoObject *obj;
+        if(handle == CUR_PROCESS_HANDLE)
+        {
+            obj = (KAutoObject *)(currentCoreContext->objectContext.currentProcess);
+            KAutoObject__AddReference(obj);
+        }
+        else
+            obj = KProcessHandleTable__ToKAutoObject(handleTable, handle);
+        
+        if(obj == NULL)
+            return 0xD8E007F7;
 
-extern struct fb fbs[2];
+        if(strcmp(classNameOfAutoObject(obj), "KDebug") == 0)
+            hwInfo = hwInfoOfProcess(((KDebug *)obj)->owner);
+        else if(strcmp(classNameOfAutoObject(obj), "KProcess") == 0)
+            hwInfo = hwInfoOfProcess((KProcess *)obj);
+        else
+            hwInfo = NULL;
 
-void prepareArm11ForFirmlaunch(void);
-void deinitScreens(void);
-void swapFramebuffers(bool isAlternate);
-void updateBrightness(u32 brightnessIndex);
-void clearScreens(bool isAlternate);
-void initScreens(void);
+        *out = hwInfo != NULL ? KPROCESSHWINFO_GET_RVALUE(hwInfo, contextId) : -1;
+
+        obj->vtable->DecrementReferenceCount(obj);
+        return 0;
+    }
+    else
+        return GetHandleInfo(out, handle, type);
+}

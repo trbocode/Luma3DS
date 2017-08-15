@@ -1137,21 +1137,29 @@ typedef struct FcramLayout
 extern bool isN3DS;
 extern void *officialSVCs[0x7E];
 
-#define KPROCESS_OFFSETOF(field) (isN3DS ? offsetof(KProcessN3DS, field) :\
-((kernelVersion >= SYSTEM_VERSION(2, 44, 6)) ? offsetof(KProcessO3DS8x, field) :\
-offsetof(KProcessO3DSPre8x, field)))
+#define KPROCESSRELATED_OFFSETOFF(classname, field) (isN3DS ? offsetof(classname##N3DS, field) :\
+((kernelVersion >= SYSTEM_VERSION(2, 44, 6)) ? offsetof(classname##O3DS8x, field) :\
+offsetof(classname##O3DSPre8x, field)))
 
-#define KPROCESS_GET_PTR(obj, field) (isN3DS ? &(obj)->N3DS.field :\
+#define KPROCESSRELATED_GET_PTR(obj, field) (isN3DS ? &(obj)->N3DS.field :\
 ((kernelVersion >= SYSTEM_VERSION(2, 44, 6)) ? &(obj)->O3DS8x.field :\
-&(obj)->O3DSPre8x.field ))
+&(obj)->O3DSPre8x.field))
 
-#define KPROCESS_GET_PTR_TYPE(type, obj, field) (isN3DS ? (type *)(&(obj)->N3DS.field) :\
+#define KPROCESSRELATED_GET_PTR_TYPE(type, obj, field) (isN3DS ? (type *)(&(obj)->N3DS.field) :\
 ((kernelVersion >= SYSTEM_VERSION(2, 44, 6)) ? (type *)(&(obj)->O3DS8x.field) :\
-(type *)(&(obj)->O3DSPre8x.field) ))
+(type *)(&(obj)->O3DSPre8x.field)))
 
-#define KPROCESS_GET_RVALUE(obj, field) *(KPROCESS_GET_PTR(obj, field))
+#define KPROCESS_OFFSETOF(field)                    KPROCESSRELATED_OFFSETOFF(KProcess, field)
+#define KPROCESS_GET_PTR(obj, field)                KPROCESSRELATED_GET_PTR(obj, field)
+#define KPROCESS_GET_PTR_TYPE(type, obj, field)     KPROCESSRELATED_GET_PTR_TYPE(type, obj, field)
+#define KPROCESS_GET_RVALUE(obj, field)             *(KPROCESS_GET_PTR(obj, field))
+#define KPROCESS_GET_RVALUE_TYPE(type, obj, field)  *(KPROCESS_GET_PTR_TYPE(type, obj, field))
 
-#define KPROCESS_GET_RVALUE_TYPE(type, obj, field) *(KPROCESS_GET_PTR(type, obj, field))
+#define KPROCESSHWINFO_OFFSETOF(field)                    KPROCESSRELATED_OFFSETOFF(KProcessHwInfo, field)
+#define KPROCESSHWINFO_GET_PTR(obj, field)                KPROCESSRELATED_GET_PTR(obj, field)
+#define KPROCESSHWINFO_GET_PTR_TYPE(type, obj, field)     KPROCESSRELATED_GET_PTR_TYPE(type, obj, field)
+#define KPROCESSHWINFO_GET_RVALUE(obj, field)             *(KPROCESSHWINFO_GET_PTR(obj, field))
+#define KPROCESSHWINFO_GET_RVALUE_TYPE(type, obj, field)  *(KPROCESSHWINFO_GET_PTR_TYPE(type, obj, field))
 
 static inline u32 idOfProcess(KProcess *process)
 {
@@ -1176,6 +1184,20 @@ static inline KProcessHandleTable *handleTableOfProcess(KProcess *process)
 static inline KDebug *debugOfProcess(KProcess *process)
 {
     return KPROCESS_GET_RVALUE(process, debug);
+}
+
+static inline const char *classNameOfAutoObject(KAutoObject *object)
+{
+    const char *name;
+    if(kernelVersion >= SYSTEM_VERSION(2, 46, 0))
+    {
+        KClassToken tok;
+        object->vtable->GetClassToken(&tok, object);
+        name = tok.name;
+    }
+    else
+        name = object->vtable->GetClassName(object);
+    return name;
 }
 
 extern Result (*KProcessHandleTable__CreateHandle)(KProcessHandleTable *this, Handle *out, KAutoObject *obj, u8 token);

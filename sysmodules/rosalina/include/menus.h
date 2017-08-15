@@ -36,3 +36,5 @@ void RosalinaMenu_TakeScreenshot(void);
 void RosalinaMenu_ShowCredits(void);
 void RosaPowerOff(void);
 void RosalinaMenu_ProcessList(void);
+void RosalinaMenu_PowerOff(void);
+void RosalinaMenu_Reboot(void);
