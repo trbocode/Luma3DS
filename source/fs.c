@@ -51,8 +51,7 @@ static bool switchToMainDir(bool isSd)
         case FR_OK:
             return true;
         case FR_NO_PATH:
-            f_mkdir(mainDir);
-            return switchToMainDir(isSd);
+            return f_mkdir(mainDir) == FR_OK && switchToMainDir(isSd);
         default:
             return false;
     }
@@ -67,6 +66,7 @@ bool mountFs(bool isSd, bool switchToCtrNand)
 u32 fileRead(void *dest, const char *path, u32 maxSize)
 {
     FIL file;
+    FRESULT result = FR_OK;
     u32 ret = 0;
 
     if(f_open(&file, path, FA_READ) != FR_OK) return ret;
@@ -74,10 +74,10 @@ u32 fileRead(void *dest, const char *path, u32 maxSize)
     u32 size = f_size(&file);
     if(dest == NULL) ret = size;
     else if(size <= maxSize)
-        f_read(&file, dest, size, (unsigned int *)&ret);
-    f_close(&file);
+        result = f_read(&file, dest, size, (unsigned int *)&ret);
+    result |= f_close(&file);
 
-    return ret;
+    return result == FR_OK ? ret : 0;
 }
 
 u32 getFileSize(const char *path)
@@ -88,17 +88,18 @@ u32 getFileSize(const char *path)
 bool fileWrite(const void *buffer, const char *path, u32 size)
 {
     FIL file;
+    FRESULT result;
 
     switch(f_open(&file, path, FA_WRITE | FA_OPEN_ALWAYS))
     {
         case FR_OK:
         {
             unsigned int written;
-            f_write(&file, buffer, size, &written);
-            f_truncate(&file);
-            f_close(&file);
+            result = f_write(&file, buffer, size, &written);
+            if(result == FR_OK) result = f_truncate(&file);
+            result |= f_close(&file);
 
-            return (u32)written == size;
+            return result == FR_OK && (u32)written == size;
         }
         case FR_NO_PATH:
             for(u32 i = 1; path[i] != 0; i++)
@@ -107,18 +108,18 @@ bool fileWrite(const void *buffer, const char *path, u32 size)
                     char folder[i + 1];
                     memcpy(folder, path, i);
                     folder[i] = 0;
-                    f_mkdir(folder);
+                    result = f_mkdir(folder);
                 }
 
-            return fileWrite(buffer, path, size);
+            return result == FR_OK && fileWrite(buffer, path, size);
         default:
             return false;
     }
 }
 
-void fileDelete(const char *path)
+bool fileDelete(const char *path)
 {
-    f_unlink(path);
+    return f_unlink(path) == FR_OK;
 }
 
 bool findPayload(char *path, u32 pressed)
@@ -181,9 +182,7 @@ bool payloadMenu(char *path)
         payloadNum++;
     }
 
-    f_closedir(&dir);
-
-    if(!payloadNum) return false;
+    if(f_closedir(&dir) != FR_OK || !payloadNum) return false;
 
     u32 pressed = 0,
         selectedPayload = 0;
@@ -251,11 +250,11 @@ bool payloadMenu(char *path)
 
 u32 firmRead(void *dest, u32 firmType)
 {
-    const char *firmFolders[][2] = {{"00000002", "20000002"},
-                                    {"00000102", "20000102"},
-                                    {"00000202", "20000202"},
-                                    {"00000003", "20000003"},
-                                    {"00000001", "20000001"}};
+    static const char *firmFolders[][2] = {{"00000002", "20000002"},
+                                           {"00000102", "20000102"},
+                                           {"00000202", "20000202"},
+                                           {"00000003", "20000003"},
+                                           {"00000001", "20000001"}};
 
     char folderPath[35],
          path[48];
@@ -281,9 +280,7 @@ u32 firmRead(void *dest, u32 firmType)
         if(tempVersion < firmVersion) firmVersion = tempVersion;
     }
 
-    f_closedir(&dir);
-
-    if(firmVersion == 0xFFFFFFFF) goto exit;
+    if(f_closedir(&dir) != FR_OK || firmVersion == 0xFFFFFFFF) goto exit;
 
     //Complete the string with the .app name
     sprintf(path, "%s/%08x.app", folderPath, firmVersion);

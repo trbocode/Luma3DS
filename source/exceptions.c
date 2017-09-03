@@ -32,6 +32,7 @@
 #include "draw.h"
 #include "utils.h"
 #include "fmt.h"
+#include "buttons.h"
 #include "../build/bundled.h"
 
 void installArm9Handlers(void)
@@ -78,30 +79,18 @@ void detectAndProcessExceptionDumps(void)
         "Precise External Abort", "Imprecise External Abort", "Debug event"
     };
 
-    static const u32   faultStatusValues[] = {
+    static const u32 faultStatusValues[] = {
         0b1, 0b100, 0b1100, 0b1110, 0b101, 0b111, 0b11, 0b110, 0b1001, 0b1011, 0b1101,
         0b1111, 0b1000, 0b10110, 0b10
     };
-
 
     initScreens();
 
     drawString(true, 10, 10, COLOR_RED, "An exception occurred");
     u32 posY;
     if(dumpHeader->processor == 11) posY = drawFormattedString(true, 10, 30, COLOR_WHITE, "Processor:       ARM11 (core %u)", dumpHeader->core);
-    else posY = drawString(true, 10, 30, COLOR_WHITE, "Processor:       ARM9"); 
+    else posY = drawString(true, 10, 30, COLOR_WHITE, "Processor:       ARM9");
 
-    const char *faultStatusInfos = NULL;
-    if (dumpHeader->type >= 2)
-    {
-        u32 xfsr = dumpHeader->type == 2 ? regs[18] : regs[17];
-        xfsr &= 0xF;
-        for (int i = 0; i < 15; i++)
-            if (xfsr == faultStatusValues[i]){
-                faultStatusInfos = faultStatusNames[i];
-                break;
-            }
-    }
     if(dumpHeader->type == 2)
     {
         if((regs[16] & 0x20) == 0 && dumpHeader->codeDumpSize >= 4)
@@ -122,10 +111,23 @@ void detectAndProcessExceptionDumps(void)
             else
                 posY = drawFormattedString(true, 10, posY + SPACING_Y, COLOR_WHITE, "Exception type:  %s", handledExceptionNames[dumpHeader->type]);
         }
+        else
+            posY = drawFormattedString(true, 10, posY + SPACING_Y, COLOR_WHITE, "Exception type:  %s", handledExceptionNames[dumpHeader->type]);
     }
     else
         posY = drawFormattedString(true, 10, posY + SPACING_Y, COLOR_WHITE, "Exception type:  %s", handledExceptionNames[dumpHeader->type]);
-    if (faultStatusInfos != NULL) posY = drawFormattedString(true, 10, posY + SPACING_Y, COLOR_WHITE, "Fault status:    %s", faultStatusInfos);
+
+    if(dumpHeader->type >= 2)
+    {
+        u32 xfsr = (dumpHeader->type == 2 ? regs[18] : regs[17]) & 0xF;
+
+        for(u32 i = 0; i < 15; i++)
+            if(xfsr == faultStatusValues[i])
+            {
+                posY = drawFormattedString(true, 10, posY + SPACING_Y, COLOR_WHITE, "Fault status:    %s", faultStatusNames[i]);
+                break;
+            }
+    }
 
     if(dumpHeader->processor == 11 && dumpHeader->additionalDataSize != 0)
         posY = drawFormattedString(true, 10, posY + SPACING_Y, COLOR_WHITE,
@@ -141,8 +143,9 @@ void detectAndProcessExceptionDumps(void)
         else if(dumpHeader->processor == 11)
             posY = drawFormattedString(true, 10 + 22 * SPACING_X, posY, COLOR_WHITE, "%-7s%08X", registerNames[i + 1], regs[20]);
     }
-    if (dumpHeader->type == 3)
-        posY = drawFormattedString(true, 10, posY + SPACING_Y, COLOR_WHITE, "%-7s%08X       Access type: %s", "FAR", regs[19], regs[17] & (1u << 11) ? "Write":"Read");
+
+    if(dumpHeader->type == 3)
+        posY = drawFormattedString(true, 10, posY + SPACING_Y, COLOR_WHITE, "%-7s%08X       Access type: %s", "FAR", regs[19], regs[17] & (1u << 11) ? "Write" : "Read");
 
     posY += SPACING_Y;
 
@@ -160,6 +163,16 @@ void detectAndProcessExceptionDumps(void)
             drawFormattedString(false, 10 + 10 * SPACING_X + 3 * i * SPACING_X, posYBottom, COLOR_WHITE, "%02X", *stackDump);
     }
 
+    static const char *choiceMessage[] = {"Press A to save the crash dump", "Press any other button to shutdown"};
+
+    drawString(true, 10, posY + SPACING_Y, COLOR_WHITE, choiceMessage[0]);
+    drawString(true, 10, posY + SPACING_Y + SPACING_Y , COLOR_WHITE, choiceMessage[1]);
+
+    if(waitInput(false) != BUTTON_A) goto exit;
+
+    drawString(true, 10, posY + SPACING_Y, COLOR_BLACK, choiceMessage[0]);
+    drawString(true, 10, posY + SPACING_Y + SPACING_Y , COLOR_BLACK, choiceMessage[1]);
+
     char folderPath[12],
          path[36],
          fileName[24];
@@ -170,15 +183,16 @@ void detectAndProcessExceptionDumps(void)
 
     if(fileWrite((void *)dumpHeader, path, dumpHeader->totalSize))
     {
-        posY = drawString(true, 10, posY + SPACING_Y, COLOR_WHITE, "You can find a dump in the following file:");
-        posY = drawString(true, 10, posY + SPACING_Y, COLOR_WHITE, path) + SPACING_Y;
+        posY = drawString(true, 10, posY + SPACING_Y, COLOR_WHITE, "You can find the dump in the following file:");
+        posY = drawFormattedString(true, 10, posY + SPACING_Y, COLOR_WHITE, "%s:/luma/%s", isSdMode ? "SD" : "CTRNAND", path) + SPACING_Y;
     }
     else posY = drawString(true, 10, posY + SPACING_Y, COLOR_RED, "Error writing the dump file");
 
     drawString(true, 10, posY + SPACING_Y, COLOR_WHITE, "Press any button to shutdown");
 
-    memset32((void *)dumpHeader, 0, dumpHeader->totalSize);
-
     waitInput(false);
+
+exit:
+    memset32((void *)dumpHeader, 0, dumpHeader->totalSize);
     mcuPowerOff();
 }

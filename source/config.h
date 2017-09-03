@@ -34,11 +34,12 @@
 
 #define CONFIG_FILE         "config.bin"
 #define CONFIG_VERSIONMAJOR 2
-#define CONFIG_VERSIONMINOR 0
+#define CONFIG_VERSIONMINOR 1
 
 #define BOOTCFG_NAND         BOOTCONFIG(0, 7)
 #define BOOTCFG_FIRM         BOOTCONFIG(3, 7)
 #define BOOTCFG_NOFORCEFLAG  BOOTCONFIG(6, 1)
+#define BOOTCFG_NTRCARDBOOT  BOOTCONFIG(7, 1)
 
 enum multiOptions
 {

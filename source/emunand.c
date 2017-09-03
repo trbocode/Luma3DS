@@ -28,8 +28,10 @@
 *   Code for locating the SDMMC struct by Normmatt
 */
 
+
 #include "emunand.h"
 #include "memory.h"
+#include "utils.h"
 #include "fatfs/sdmmc/sdmmc.h"
 #include "../build/bundled.h"
 
