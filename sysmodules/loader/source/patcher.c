@@ -650,22 +650,6 @@ void patchCode(u64 progId, u16 progVer, u8 *code, u32 size, u32 textSize, u32 ro
         off[1] = 0xE12FFF1E; //bx lr
     }
 
-    else if(progId == 0x0004013000003202LL) //FRIENDS
-    {
-        static const u8 pattern[] = {
-            0x42, 0xE0, 0x1E, 0xFF
-        };
-
-        u8 mostRecentFpdVer = 10;
-
-        u8 *off = memsearch(code, pattern, textSize, sizeof(pattern));
-
-        if(off == NULL) goto error;
-
-        //Allow online access to work with old friends modules
-        if(off[0xA] < mostRecentFpdVer) off[0xA] = mostRecentFpdVer;
-    }
-
     else if((progId == 0x0004001000021000LL || //USA MSET
              progId == 0x0004001000020000LL || //JPN MSET
              progId == 0x0004001000022000LL || //EUR MSET
@@ -759,6 +743,25 @@ void patchCode(u64 progId, u16 progVer, u8 *code, u32 size, u32 textSize, u32 ro
                 memcpy(off - 1, off, 16);
                 *(off + 3) = 0xE3800000 | cpuSetting;
             }
+        }
+
+        if(progVer > 0x12)
+        {
+            static const u8 pattern[] = {
+                0x00, 0xB1, 0x15, 0x00
+            };
+
+            u8 *roStart = code + ((textSize + 4095) & 0xFFFFF000),
+               *start = memsearch(roStart, pattern, roSize, sizeof(pattern));
+
+            if(start == NULL) goto error;
+
+            start++;
+            u8 *end;
+            for(end = start + 8; *(u32 *)end != 0xCC010000; end += 8)
+                if(end >= roStart + roSize - 12) goto error;
+
+            memset32(start, 0, end - start);
         }
 
         s64 nbSection0Modules;

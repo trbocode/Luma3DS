@@ -233,9 +233,9 @@ static inline void Draw_ConvertPixelToBGR8(u8 *dst, const u8 *src, GSPGPU_Frameb
         case GSP_RGB5_A1_OES:
         {
             u16 px = *(u16 *)src;
-            blue = px & 0x1F;
-            green = (px >> 5) & 0x1F;
-            red = (px >> 10) & 0x1F;
+            blue = (px >> 1) & 0x1F;
+            green = (px >> 6) & 0x1F;
+            red = (px >> 11) & 0x1F;
 
             dst[0] = (blue  << 3) | (blue  >> 2);
             dst[1] = (green << 3) | (green >> 2);
@@ -246,9 +246,9 @@ static inline void Draw_ConvertPixelToBGR8(u8 *dst, const u8 *src, GSPGPU_Frameb
         case GSP_RGBA4_OES:
         {
             u16 px = *(u32 *)src;
-            blue = px & 0xF;
-            green = (px >> 4) & 0xF;
-            red = (px >> 8) & 0xF;
+            blue = (px >> 4) & 0xF;
+            green = (px >> 8) & 0xF;
+            red = (px >> 12) & 0xF;
 
             dst[0] = (blue  << 4) | (blue  >> 4);
             dst[1] = (green << 4) | (green >> 4);
