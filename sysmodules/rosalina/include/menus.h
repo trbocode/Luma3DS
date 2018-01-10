@@ -38,3 +38,4 @@ void RosaPowerOff(void);
 void RosalinaMenu_ProcessList(void);
 void RosalinaMenu_PowerOff(void);
 void RosalinaMenu_Reboot(void);
+void RosalinaMenu_Cheats(void);

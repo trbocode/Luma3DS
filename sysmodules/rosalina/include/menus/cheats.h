@@ -24,28 +24,13 @@
 *         reasonable ways as different from the original version.
 */
 
+/* This file was entirely written by Duckbill */
+
 #pragma once
 
-#include "types.h"
+#include <3ds/types.h>
 
-typedef struct __attribute__((packed))
-{
-    u32 magic[2];
-    u16 versionMinor, versionMajor;
+#define CHEATS_PER_MENU_PAGE 18
 
-    u16 processor, core;
-    u32 type;
-
-    u32 totalSize;
-    u32 registerDumpSize;
-    u32 codeDumpSize;
-    u32 stackDumpSize;
-    u32 additionalDataSize;
-} ExceptionDumpHeader;
-
-void FIQHandler(void);
-void undefinedInstructionHandler(void);
-void dataAbortHandler(void);
-void prefetchAbortHandler(void);
-
-u32 safecpy(void *dst, const void *src, u32 len);
+void RosalinaMenu_Cheats(void);
+void Cheat_applyKeyCheats();
