@@ -1,6 +1,6 @@
 /*
 *   This file is part of Luma3DS
-*   Copyright (C) 2016-2017 Aurora Wright, TuxSH
+*   Copyright (C) 2016-2018 Aurora Wright, TuxSH
 *
 *   This program is free software: you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@ extern ConfigurationStatus needConfig;
 extern FirmwareSource firmSource;
 
 bool isSdMode;
-u16 launchedPath[41];
+u16 launchedPath[80+1];
 BootType bootType;
 
 void main(int argc, char **argv, u32 magicWord)
@@ -60,13 +60,13 @@ void main(int argc, char **argv, u32 magicWord)
 
     //Shell closed, no error booting NTRCARD, NAND paritions not even considered
     isNtrBoot = bootMediaStatus[3] == 2 && !bootMediaStatus[1] && !bootPartitionsStatus[0] && !bootPartitionsStatus[1];
- 
+
     if((magicWord & 0xFFFF) == 0xBEEF && argc >= 1) //Normal (B9S) boot
     {
         bootType = isNtrBoot ? B9SNTR : B9S;
 
         u32 i;
-        for(i = 0; i < 40 && argv[0][i] != 0; i++) //Copy and convert the path to UTF-16
+        for(i = 0; i < sizeof(launchedPath)/2 - 1 && argv[0][i] != 0; i++) //Copy and convert the path to UTF-16
             launchedPath[i] = argv[0][i];
         launchedPath[i] = 0;
     }
@@ -76,7 +76,7 @@ void main(int argc, char **argv, u32 magicWord)
 
         u32 i;
         u16 *p = (u16 *)argv[0];
-        for(i = 0; i < 40 && p[i] != 0; i++)
+        for(i = 0; i < sizeof(launchedPath)/2 - 1 && p[i] != 0; i++)
             launchedPath[i] = p[i];
         launchedPath[i] = 0;
     }

@@ -1,6 +1,6 @@
 /*
 *   This file is part of Luma3DS
-*   Copyright (C) 2016-2017 Aurora Wright, TuxSH
+*   Copyright (C) 2016-2018 Aurora Wright, TuxSH
 *
 *   This program is free software: you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@
 #define GPU_FB_BOTTOM_STRIDE        REG32(0x10400590)
 
 #define GPU_PSC0_CNT                REG32(0x1040001C)
-#define GPU_PSC1_CNT                REG32(0x1040001C)
+#define GPU_PSC1_CNT                REG32(0x1040002C)
 
 #define GPU_TRANSFER_CNT            REG32(0x10400C18)
 #define GPU_CMDLIST_CNT             REG32(0x104018F0)

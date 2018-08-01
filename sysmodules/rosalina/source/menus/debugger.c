@@ -1,6 +1,6 @@
 /*
 *   This file is part of Luma3DS
-*   Copyright (C) 2016-2017 Aurora Wright, TuxSH
+*   Copyright (C) 2016-2018 Aurora Wright, TuxSH
 *
 *   This program is free software: you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -69,12 +69,10 @@ void DebuggerMenu_EnableDebugger(void)
     bool done = false, alreadyEnabled = gdbServer.super.running;
     Result res = 0;
     char buf[65];
-    bool cantStart;
-    Handle dummy;
+    bool isSocURegistered;
 
-    res = OpenProcessByName("socket", &dummy);
-    cantStart = R_FAILED(res);
-    svcCloseHandle(dummy);
+    res = srvIsServiceRegistered(&isSocURegistered, "soc:U");
+    isSocURegistered = R_SUCCEEDED(res) && isSocURegistered;
 
     Draw_Lock();
     Draw_ClearFramebuffer();
@@ -88,7 +86,7 @@ void DebuggerMenu_EnableDebugger(void)
 
         if(alreadyEnabled)
             Draw_DrawString(10, 30, COLOR_WHITE, "Already enabled!");
-        else if(cantStart)
+        else if(!isSocURegistered)
             Draw_DrawString(10, 30, COLOR_WHITE, "Can't start the debugger before the system has fi-\nnished loading.");
         else
         {

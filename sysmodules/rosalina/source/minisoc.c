@@ -1,6 +1,6 @@
 /*
 *   This file is part of Luma3DS
-*   Copyright (C) 2016-2017 Aurora Wright, TuxSH
+*   Copyright (C) 2016-2018 Aurora Wright, TuxSH
 *
 *   This program is free software: you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -80,6 +80,18 @@ Result miniSocInit()
 
     u32 tmp = 0;
     Result ret = 0;
+    bool isSocURegistered;
+
+    ret = srvIsServiceRegistered(&isSocURegistered, "soc:U");
+    if(ret != 0) goto cleanup;
+    if(!isSocURegistered)
+    {
+        ret = -1;
+        goto cleanup;
+    }
+
+    ret = srvGetServiceHandle(&SOCU_handle, "soc:U");
+    if(ret != 0) goto cleanup;
 
     ret = svcControlMemory(&tmp, socContextAddr, 0, socContextSize, MEMOP_ALLOC, MEMPERM_READ | MEMPERM_WRITE);
     if(ret != 0) goto cleanup;
@@ -89,8 +101,7 @@ Result miniSocInit()
     ret = svcCreateMemoryBlock(&socMemhandle, (u32)socContextAddr, socContextSize, 0, 3);
     if(ret != 0) goto cleanup;
 
-    ret = srvGetServiceHandle(&SOCU_handle, "soc:U");
-    if(ret != 0) goto cleanup;
+
 
     ret = SOCU_Initialize(socMemhandle, socContextSize);
     if(ret != 0) goto cleanup;
@@ -303,7 +314,7 @@ int socAccept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
     if(ret == 0)
         ret = _net_convert_error(cmdbuf[2]);
 
-    if(ret < 0)
+    // if(ret < 0)
         //errno = -ret;
 
     if(ret >= 0 && addr != NULL)

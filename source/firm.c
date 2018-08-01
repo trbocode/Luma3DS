@@ -1,6 +1,6 @@
 /*
 *   This file is part of Luma3DS
-*   Copyright (C) 2016-2017 Aurora Wright, TuxSH
+*   Copyright (C) 2016-2018 Aurora Wright, TuxSH
 *
 *   This program is free software: you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -123,7 +123,7 @@ static inline u32 loadFirmFromStorage(FirmwareType firmType)
         "cetk_sysupdater"
     };
 
-    u32 firmSize = fileRead(firm, firmType == NATIVE_FIRM1X2X ? firmwareFiles[0] : firmwareFiles[(u32)firmType], 0x400000 + sizeof(Cxi) + 0x200);
+    u32 firmSize = fileRead(firm, firmwareFiles[(u32)firmType], 0x400000 + sizeof(Cxi) + 0x200);
 
     if(!firmSize) return 0;
 
@@ -137,7 +137,7 @@ static inline u32 loadFirmFromStorage(FirmwareType firmType)
 
         u8 cetk[0xA50];
 
-        if(fileRead(cetk, firmType == NATIVE_FIRM1X2X ? cetkFiles[0] : cetkFiles[(u32)firmType], sizeof(cetk)) != sizeof(cetk))
+        if(fileRead(cetk, cetkFiles[(u32)firmType], sizeof(cetk)) != sizeof(cetk))
             error("The cetk is missing or corrupted.");
 
         firmSize = decryptNusFirm((Ticket *)(cetk + 0x140), (Cxi *)firm, firmSize);
@@ -152,18 +152,42 @@ static inline u32 loadFirmFromStorage(FirmwareType firmType)
 
 u32 loadNintendoFirm(FirmwareType *firmType, FirmwareSource nandType, bool loadFromStorage, bool isSafeMode)
 {
-    if(isSdMode && !mountFs(false, false)) error("Failed to mount CTRNAND.");
+    u32 firmVersion,
+        firmSize;
 
-    //Load FIRM from CTRNAND
-    u32 firmVersion = firmRead(firm, (u32)*firmType);
+    bool ctrNandError = isSdMode && !mountFs(false, false);
 
-    if(firmVersion == 0xFFFFFFFF) error("Failed to get the CTRNAND FIRM.");
+    if(!ctrNandError)
+    {
+        //Load FIRM from CTRNAND
+        firmVersion = firmRead(firm, (u32)*firmType);
 
-    u32 firmSize = decryptExeFs((Cxi *)firm);
+        if(firmVersion == 0xFFFFFFFF) ctrNandError = true;
+        else
+        {
+            firmSize = decryptExeFs((Cxi *)firm);
 
-    if(!firmSize) error("Failed to decrypt the CTRNAND FIRM.");
+            if(!firmSize || !checkFirm(firmSize)) ctrNandError = true;
+        }
+    }
 
-    if(!checkFirm(firmSize)) error("The CTRNAND FIRM is invalid or corrupted.");
+    bool loadedFromStorage = false;
+
+    if(loadFromStorage || ctrNandError)
+    {
+        u32 result = loadFirmFromStorage(*firmType);
+
+        if(result != 0)
+        {
+            loadedFromStorage = true;
+            firmSize = result;
+        }
+        else if(ctrNandError) error("Unable to mount CTRNAND or load the CTRNAND FIRM.\nPlease use an external one.");
+    }
+
+    //Check that the FIRM is right for the console from the ARM9 section address
+    if((firm->section[3].offset != 0 ? firm->section[3].address : firm->section[2].address) != (ISN3DS ? (u8 *)0x8006000 : (u8 *)0x8006800))
+        error("The %s FIRM is not for this console.", loadedFromStorage ? "external" : "CTRNAND");
 
     if(!ISN3DS && *firmType == NATIVE_FIRM && firm->section[0].address == (u8 *)0x1FF80000)
     {
@@ -174,23 +198,6 @@ u32 loadNintendoFirm(FirmwareType *firmType, FirmwareSource nandType, bool loadF
 
         *firmType = NATIVE_FIRM1X2X;
     }
-
-    bool loadedFromStorage = false;
-
-    if(loadFromStorage)
-    {
-        u32 result = loadFirmFromStorage(*firmType);
-
-        if(result != 0)
-        {
-            loadedFromStorage = true;
-            firmSize = result;
-        }
-    }
-
-    //Check that the FIRM is right for the console from the ARM9 section address
-    if((firm->section[3].offset != 0 ? firm->section[3].address : firm->section[2].address) != (ISN3DS ? (u8 *)0x8006000 : (u8 *)0x8006800))
-        error("The %s FIRM is not for this console.", loadedFromStorage ? "external" : "CTRNAND");
 
     if(loadedFromStorage || ISDEVUNIT)
     {
